@@ -1,3 +1,4 @@
+import math
 import os
 import random
 import sys
@@ -57,6 +58,8 @@ class Bird:
         self.rct: pg.Rect = self.img.get_rect()
         self.rct.center = xy
 
+        self.dire = (+5, 0)
+
     def change_img(self, num: int, screen: pg.Surface):
         """
         こうかとん画像を切り替え，画面に転送する
@@ -82,6 +85,7 @@ class Bird:
             self.rct.move_ip(-sum_mv[0], -sum_mv[1])
         if not (sum_mv[0] == 0 and sum_mv[1] == 0):
             self.img = __class__.imgs[tuple(sum_mv)]
+            self.dire = sum_mv
         screen.blit(self.img, self.rct)
 
 
@@ -96,9 +100,15 @@ class Beam:
         """
         self.img = pg.image.load(f"fig/beam.png")
         self.rct = self.img.get_rect()
-        self.rct.centery = bird.rct.centery  # こうかとんの中心縦座標
-        self.rct.left = bird.rct.right  # こうかとんの右座標
-        self.vx, self.vy = +5, 0
+        self.vx = bird.dire[0]
+        self.vy = bird.dire[1]
+        ata = math.atan2(-self.vy, self.vx)
+        deg = math.degrees(ata)
+        #こうかとんの向きでビームの向きを回転
+        self.rotoimg = pg.transform.rotozoom(self.img, deg, 1)
+        #ビームの初期位置の調整
+        self.rct.centery = bird.rct.centery + (bird.rct.height * self.vy / 5)
+        self.rct.centerx = bird.rct.centerx + (bird.rct.width * self.vx / 5)
 
     def update(self, screen: pg.Surface):
         """
@@ -107,7 +117,7 @@ class Beam:
         """
         if check_bound(self.rct) == (True, True):
             self.rct.move_ip(self.vx, self.vy)
-            screen.blit(self.img, self.rct)    
+            screen.blit(self.rotoimg, self.rct)    
 
 
 class Bomb:
@@ -141,7 +151,6 @@ class Bomb:
         screen.blit(self.img, self.rct)
     
 
-
 class Score:
     def __init__(self):
         self.fonto = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
@@ -156,6 +165,31 @@ class Score:
         screen.blit(self.imgscore, self.score_rct)
 
 
+class Explosion:
+    """
+    爆発に関するクラス
+    """
+    def __init__(self, bomb:"Bomb"):
+        """
+        爆弾の位置に爆発gifを描画
+        引数：爆弾クラス
+        """
+        self.life = 100
+        self.img = pg.image.load(f"fig/explosion.gif")
+        self.img_rct = self.img.get_rect()
+        self.img_rct.center = bomb.rct.center
+    def update(self, screen: pg.Surface):
+        """
+        爆発をlifeの時間分画像を反転させながら描画する
+        引数 screen:画面のSurface
+        """
+        self.life -= 1
+        if self.life > 0:
+            if self.life % 2 == 0:
+                self.img = pg.transform.flip(self.img, -1, -1)
+            screen.blit(self.img, self.img_rct)
+
+
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
@@ -165,6 +199,8 @@ def main():
     #beam = None  # Beam(bird)  # ビームインスタンス生成
     # bomb2 = Bomb((0, 0, 255), 20)    
     bombs = [Bomb((255, 0, 0), 10) for i in range(NUM_OF_BOMBS)]
+    #explosionリスト初期化
+    explosions = []
     beams = []
     score = Score()
     clock = pg.time.Clock()
@@ -199,6 +235,8 @@ def main():
                         beams[j] = None
                         bombs[i] = None
                         score.score += 1
+                        explosion = Explosion(bomb)
+                        explosions.append(explosion)
                         bird.change_img(6, screen)
                         pg.display.update()
 
@@ -215,6 +253,9 @@ def main():
                 del beams[i]
             else:
                 beam.update(screen)
+        explosions = [explosion for explosion in explosions if explosion.life > 0]
+        for explosion in explosions:
+            explosion.update(screen)
         # bomb2.update(screen)
         pg.display.update()
         tmr += 1
