@@ -152,6 +152,9 @@ class Bomb:
     
 
 class Score:
+    """
+    スコアに関するクラス
+    """
     def __init__(self):
         self.fonto = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
         self.color = (0, 0, 255)
@@ -161,6 +164,10 @@ class Score:
         self.score_rct.center = (100, HEIGHT-50)
 
     def update(self, screen: pg.Surface):
+        """
+        爆弾にビームをぶつけた個数に基づいてスコアを増加する
+        引数 screen:画面surface 
+        """
         self.imgscore = self.fonto.render("スコア:" + str(self.score), 0, self.color)
         screen.blit(self.imgscore, self.score_rct)
 
